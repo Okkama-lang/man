@@ -23,7 +23,7 @@ git add -A && git commit -m "Reference for Okkama X.Y.Z" && git push
 
 The generator runs the Okkama binary (`OKKAMA_BIN`, or `okkama` on `PATH`) once for the index and once per
 module with an explicit `std/` prefix. It does not execute examples. A CLI failure aborts the build; never
-commit an incomplete build. The current export comes from Okkama 0.6.2: 499 modules, 12,341 search entries.
+commit an incomplete build. The current export comes from Okkama 0.6.3: 499 modules, 12,341 search entries.
 Module versions are distinct from the binary version.
 
 `okkama man` prints warnings for unresolved documentation links on stderr; they do not stop the build.

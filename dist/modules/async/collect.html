@@ -1,0 +1,74 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Okkama standard library reference, generated from okkama man."><title>async/collect · Okkama reference</title><link rel="stylesheet" href="../../assets/style.css"></head><body data-root="../../" data-module="async/collect"><header><button id="menu" aria-label="Toggle module navigation" aria-expanded="false">☰</button><a class="brand" href="../../index.html"><strong>0&lt;</strong> Okkama <span>REFERENCE</span></a><div class="searchbox"><label class="sr-only" for="search">Search modules and actions</label><input id="search" type="search" placeholder="Find a module or action…" autocomplete="off"><kbd>/</kbd><div id="results" hidden aria-live="polite"></div></div><div class="toplinks"><a href="https://okkama-lang.github.io/">okkama.</a><a href="https://github.com/Okkama-lang/okkama" target="_blank" rel="noopener noreferrer">GitHub ↗</a></div><span class="version">okkama 0.6.2</span></header><div class="layout"><aside id="sidebar"><div class="nav-label">STANDARD LIBRARY</div><nav id="tree" aria-label="Modules"></nav></aside><main><div class="breadcrumb"><a href="../../index.html">Reference</a> / async/collect</div><h1 id="async-collect">async/collect<a class="permalink" href="#async-collect" aria-label="Link to async/collect">#</a></h1><p>Structured collection of futures.</p>
+<p><strong>Version:</strong> <code>v1.0.0</code></p>
+<h2 id="synopsis">Synopsis<a class="permalink" href="#synopsis" aria-label="Link to Synopsis">#</a></h2><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama"><b class="kw">let</b> pending <b class="kw">is</b> @Future&lt;<b class="kw">int</b>&gt; = [
+    Worker(id: <span class="num">1</span>).run(),
+    Worker(id: <span class="num">2</span>).run(),
+    Worker(id: <span class="num">3</span>).run(),
+];
+<b class="kw">let</b> collected <b class="kw">is</b> AllFutures&lt;<b class="kw">int</b>&gt; = AllFutures(origins: pending);
+<b class="kw">let</b> values <b class="kw">is</b> Sequencing&lt;<b class="kw">int</b>&gt; = <b class="kw">await</b> collected.results();</code></pre></div><h2 id="description">Description<a class="permalink" href="#description" aria-label="Link to Description">#</a></h2><p>Structured collection of futures.</p>
+<p><code>AllFutures&lt;T&gt;</code> starts every supplied future and publishes results in input
+order only after every future succeeds. The input may be any <code>Sequencing</code>
+object; it is read when <code>results()</code> starts, not during construction.</p>
+<p>The returned sequence preserves input order rather than completion order. An
+empty input completes immediately with an empty sequence.</p>
+<p>If one future fails, unfinished siblings are cancelled and their cleanup is
+awaited. The observed failure remains primary; the other failures follow as
+secondary diagnostics in input order, each failure once. A sibling whose
+own <code>await</code> had already completed when the cancellation came runs on to its
+next <code>await</code>, where the cancellation reaches it; if it fails before that,
+its failure is one of the secondaries. Cancelling <code>results()</code> applies
+the same structured cleanup rule. Repeated calls return the same future and
+never restart the inputs.</p>
+<p><code>Raced&lt;T&gt;</code> returns the value of the first settled input. A failing first
+settlement remains a failure; the race does not wait for a later success.
+Every loser is cancelled and fully cleaned before the result settles:</p>
+<div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-text">let race is Raced&lt;Response&gt; = Raced(origins: requests);
+let response = await race.winner();</code></pre></div><p><code>FirstSuccessful&lt;T&gt;</code> instead ignores failed attempts while success is still
+possible. If all inputs fail, the first failure in completion order remains
+primary and later failures become ordered secondary diagnostics:</p>
+<div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-text">let attempts is FirstSuccessful&lt;Response&gt; = FirstSuccessful(
+    origins: requests,
+);
+let response = await attempts.outcome();</code></pre></div><p>Neither selector accepts an empty input; both throw <code>NoFutures</code>. A successful
+winner is not published when cancelling a loser exposes a cleanup failure.</p>
+<p><code>FutureCompletions&lt;T&gt;</code> exposes settlement order without turning a suspending
+operation into a synchronous cursor. <code>completion()</code> returns the original,
+already-settled <code>Future&lt;T&gt;</code> rather than extracting its value or failure:</p>
+<div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-text">let stream is FutureCompletions&lt;Response&gt; = FutureCompletions(
+    origins: requests,
+);
+
+loop {
+    last if stream.remaining_count() == 0;
+    let completed = await stream.completion();
+    try {
+        let response = await completed;
+        responses.write(response);
+    }
+    catch error is RequestFailed {
+        failures.write(error);
+    }
+}</code></pre></div><p>Every input position is returned once, including duplicate future identities.
+Concurrent completion requests and simultaneous settlements are paired FIFO;
+already-settled inputs are ordered by their input positions. Calling
+<code>completion()</code> after exhaustion throws <code>NoFutures</code>. Cancelling a pending
+completion request cancels the stream&#39;s unfinished inputs and waits for their
+cleanup; that request, and every request after it, fails with the
+cancellation (cleanup failures attached), not <code>NoFutures</code>.</p>
+<h2 id="public-api">Public API<a class="permalink" href="#public-api" aria-label="Link to Public API">#</a></h2><h3 id="object-allfutures">object AllFutures<a class="permalink" href="#object-allfutures" aria-label="Link to object AllFutures">#</a></h3><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama"><b class="kw">object</b> AllFutures&lt;T&gt;</code></pre></div><p>Every future&#39;s result, in input order, once all succeed; the first failure
+cancels the rest.</p>
+<h4 id="allfutures-allfutures">AllFutures.AllFutures<a class="permalink" href="#allfutures-allfutures" aria-label="Link to AllFutures.AllFutures">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">AllFutures(:origins)</code></pre></div><p>Runs origins.</p>
+<h4 id="allfutures-results">AllFutures.results<a class="permalink" href="#allfutures-results" aria-label="Link to AllFutures.results">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama"><b class="kw">async</b> results() <b class="kw">is</b> Sequencing&lt;T&gt;</code></pre></div><p>The results in input order.</p>
+<h3 id="object-raced">object Raced<a class="permalink" href="#object-raced" aria-label="Link to object Raced">#</a></h3><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama"><b class="kw">object</b> Raced&lt;T&gt;</code></pre></div><p>The result of whichever future settles first; the others are cancelled.</p>
+<h4 id="raced-raced">Raced.Raced<a class="permalink" href="#raced-raced" aria-label="Link to Raced.Raced">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">Raced(:origins)</code></pre></div><p>Races origins; an empty list is NoFutures.</p>
+<h4 id="raced-winner">Raced.winner<a class="permalink" href="#raced-winner" aria-label="Link to Raced.winner">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama"><b class="kw">async</b> winner() <b class="kw">is</b> T</code></pre></div><p>The first result, or the first failure.</p>
+<h3 id="object-firstsuccessful">object FirstSuccessful<a class="permalink" href="#object-firstsuccessful" aria-label="Link to object FirstSuccessful">#</a></h3><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama"><b class="kw">object</b> FirstSuccessful&lt;T&gt;</code></pre></div><p>The result of the first future to succeed; failures wait for the others.</p>
+<h4 id="firstsuccessful-firstsuccessful">FirstSuccessful.FirstSuccessful<a class="permalink" href="#firstsuccessful-firstsuccessful" aria-label="Link to FirstSuccessful.FirstSuccessful">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">FirstSuccessful(:origins)</code></pre></div><p>Runs origins.</p>
+<h4 id="firstsuccessful-outcome">FirstSuccessful.outcome<a class="permalink" href="#firstsuccessful-outcome" aria-label="Link to FirstSuccessful.outcome">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama"><b class="kw">async</b> outcome() <b class="kw">is</b> T</code></pre></div><p>The first success; when all fail, the first failure.</p>
+<h3 id="object-futurecompletions">object FutureCompletions<a class="permalink" href="#object-futurecompletions" aria-label="Link to object FutureCompletions">#</a></h3><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama"><b class="kw">object</b> FutureCompletions&lt;T&gt;</code></pre></div><p>Futures handed out in the order they finish.</p>
+<h4 id="futurecompletions-futurecompletions">FutureCompletions.FutureCompletions<a class="permalink" href="#futurecompletions-futurecompletions" aria-label="Link to FutureCompletions.FutureCompletions">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">FutureCompletions(:origins)</code></pre></div><p>Watches origins.</p>
+<h4 id="futurecompletions-remaining-count">FutureCompletions.remaining_count<a class="permalink" href="#futurecompletions-remaining-count" aria-label="Link to FutureCompletions.remaining_count">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">remaining_count() <b class="kw">is</b> <b class="kw">int</b></code></pre></div><p>How many have not been handed out.</p>
+<h4 id="futurecompletions-completion">FutureCompletions.completion<a class="permalink" href="#futurecompletions-completion" aria-label="Link to FutureCompletions.completion">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama"><b class="kw">async</b> completion() <b class="kw">is</b> Future&lt;T&gt;</code></pre></div><p>The next future to finish.</p>
+<h2 id="errors">Errors<a class="permalink" href="#errors" aria-label="Link to Errors">#</a></h2><h3 id="enum-nofutures">enum NoFutures<a class="permalink" href="#enum-nofutures" aria-label="Link to enum NoFutures">#</a></h3><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama"><b class="kw">enum</b> NoFutures <b class="kw">is</b> Error = (<b class="kw">none</b>)</code></pre></div><p>There were no futures to race.</p>
+<h4 id="nofutures-none">NoFutures.none<a class="permalink" href="#nofutures-none" aria-label="Link to NoFutures.none">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama"><b class="kw">none</b></code></pre></div><footer>Generated from <code>okkama man</code>. The source comments are the source of truth. · <a href="https://okkama-lang.github.io/">okkama-lang.github.io</a> · <a href="https://github.com/Okkama-lang/okkama">Source on GitHub</a></footer></main><aside class="on-this-page"><div class="nav-label">ON THIS PAGE</div><a href="#synopsis">Synopsis</a><a href="#description">Description</a><a href="#public-api">Public API</a><a href="#object-allfutures">object AllFutures</a><a href="#object-raced">object Raced</a><a href="#object-firstsuccessful">object FirstSuccessful</a><a href="#object-futurecompletions">object FutureCompletions</a><a href="#errors">Errors</a><a href="#enum-nofutures">enum NoFutures</a></aside></div><script src="../../assets/data.js"></script><script src="../../assets/app.js"></script></body></html>

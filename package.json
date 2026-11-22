@@ -1,0 +1,18 @@
+{
+  "name": "okkama-man",
+  "version": "1.0.0",
+  "description": "Static Okkama reference generated from the installed CLI",
+  "main": "index.js",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --check source/app.js && python3 check.py",
+    "preview": "python3 -m http.server 8766 --bind 127.0.0.1 --directory dist"
+  },
+  "keywords": [],
+  "author": "",
+  "type": "commonjs",
+  "dependencies": {
+    "marked": "15.0.12"
+  },
+  "private": true
+}

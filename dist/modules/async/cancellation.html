@@ -1,0 +1,55 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Okkama standard library reference, generated from okkama man."><title>async/cancellation · Okkama reference</title><link rel="stylesheet" href="../../assets/style.css"></head><body data-root="../../" data-module="async/cancellation"><header><button id="menu" aria-label="Toggle module navigation" aria-expanded="false">☰</button><a class="brand" href="../../index.html"><strong>0&lt;</strong> Okkama <span>REFERENCE</span></a><div class="searchbox"><label class="sr-only" for="search">Search modules and actions</label><input id="search" type="search" placeholder="Find a module or action…" autocomplete="off"><kbd>/</kbd><div id="results" hidden aria-live="polite"></div></div><div class="toplinks"><a href="https://okkama-lang.github.io/">okkama.</a><a href="https://github.com/Okkama-lang/okkama" target="_blank" rel="noopener noreferrer">GitHub ↗</a></div><span class="version">okkama 0.6.2</span></header><div class="layout"><aside id="sidebar"><div class="nav-label">STANDARD LIBRARY</div><nav id="tree" aria-label="Modules"></nav></aside><main><div class="breadcrumb"><a href="../../index.html">Reference</a> / async/cancellation</div><h1 id="async-cancellation">async/cancellation<a class="permalink" href="#async-cancellation" aria-label="Link to async/cancellation">#</a></h1><p>Explicit cooperative cancellation capabilities.</p>
+<p><strong>Version:</strong> <code>v1.0.0</code></p>
+<h2 id="synopsis">Synopsis<a class="permalink" href="#synopsis" aria-label="Link to Synopsis">#</a></h2><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama"><b class="kw">let</b> cancellation = Cancellation();
+<b class="kw">let</b> token = cancellation.cancelling();
+
+for records -&gt; record {
+    token.check();
+    process(record);
+}
+
+cancellation.cancel();</code></pre></div><h2 id="description">Description<a class="permalink" href="#description" aria-label="Link to Description">#</a></h2><p>Explicit cooperative cancellation capabilities.</p>
+<p><code>Cancellation</code> owns one runtime-local cancellation request. Its
+<code>cancelling()</code> action returns a restricted <code>Cancelling</code> capability which can
+observe the request but cannot issue it.</p>
+<p>Explicit cancellation is independent from <code>Future.cancel()</code>. Requesting a
+<code>Cancellation</code> does not cancel any future automatically: cooperating code
+must call <code>check()</code> or await <code>wait()</code>.</p>
+<p>Cpu-bound cooperation.</p>
+<p>Pass the restricted capability to work which should remain cancellable:</p>
+<p><code>check()</code> is cheap before a request and throws the builtin <code>Cancelled</code>
+afterwards.</p>
+<p>Waiting for a request.</p>
+<p><code>wait()</code> is useful when cancellation itself is an asynchronous event:</p>
+<div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-text">async monitor(cancelling is Cancelling) {
+    await cancelling.wait();
+    audit.writeln(&quot;cancellation requested&quot;);
+}
+
+let cancellation = Cancellation();
+let monitoring = spawn Monitor(
+    cancelling: cancellation.cancelling(),
+).run();
+cancellation.cancel();
+await monitoring;</code></pre></div><p>Every waiter resumes exactly once. A wait started after the request completes
+immediately. Cancelling the future returned by <code>wait()</code> only abandons that
+wait; it does not request cancellation and does not affect other waiters.</p>
+<p>Ownership.</p>
+<p>Keep <code>Cancellation</code> with the owner of an operation and pass only
+<code>Cancelling</code> to collaborators. Constructing <code>CancellationToken</code> directly is
+rejected by the runtime; tokens can only come from <code>cancelling()</code>.</p>
+<h2 id="public-api">Public API<a class="permalink" href="#public-api" aria-label="Link to Public API">#</a></h2><h3 id="role-cancelling">role Cancelling<a class="permalink" href="#role-cancelling" aria-label="Link to role Cancelling">#</a></h3><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama"><b class="kw">role</b> Cancelling</code></pre></div><p>A request to stop that work checks: <code>cancelling.check()</code> throws once it is
+requested.</p>
+<h4 id="cancelling-requested">Cancelling.requested<a class="permalink" href="#cancelling-requested" aria-label="Link to Cancelling.requested">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">requested() <b class="kw">is</b> <b class="kw">bool</b></code></pre></div><p>Whether stopping was requested.</p>
+<h4 id="cancelling-check">Cancelling.check<a class="permalink" href="#cancelling-check" aria-label="Link to Cancelling.check">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">check() <b class="kw">is</b> <b class="kw">void</b></code></pre></div><p>Throws Cancelled once stopping was requested.</p>
+<h4 id="cancelling-wait">Cancelling.wait<a class="permalink" href="#cancelling-wait" aria-label="Link to Cancelling.wait">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama"><b class="kw">async</b> wait() <b class="kw">is</b> Cancelling</code></pre></div><p>Waits until stopping is requested.</p>
+<h3 id="object-cancellation">object Cancellation<a class="permalink" href="#object-cancellation" aria-label="Link to object Cancellation">#</a></h3><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama"><b class="kw">object</b> Cancellation</code></pre></div><p>The side that asks to stop; hand its cancelling() to the work.</p>
+<h4 id="cancellation-cancellation">Cancellation.Cancellation<a class="permalink" href="#cancellation-cancellation" aria-label="Link to Cancellation.Cancellation">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">Cancellation()</code></pre></div><p>A cancellation not yet requested.</p>
+<h4 id="cancellation-cancelling">Cancellation.cancelling<a class="permalink" href="#cancellation-cancelling" aria-label="Link to Cancellation.cancelling">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">cancelling() <b class="kw">is</b> Cancelling</code></pre></div><p>The side the work watches.</p>
+<h4 id="cancellation-cancel">Cancellation.cancel<a class="permalink" href="#cancellation-cancel" aria-label="Link to Cancellation.cancel">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">cancel() <b class="kw">is</b> <b class="kw">void</b></code></pre></div><p>Asks the work to stop; asking again does nothing.</p>
+<h3 id="object-cancellationtoken">object CancellationToken<a class="permalink" href="#object-cancellationtoken" aria-label="Link to object CancellationToken">#</a></h3><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama"><b class="kw">object</b> CancellationToken <b class="kw">does</b> Cancelling</code></pre></div><p>A Cancelling that is never requested, for work nothing will stop.</p>
+<h4 id="cancellationtoken-cancellationtoken">CancellationToken.CancellationToken<a class="permalink" href="#cancellationtoken-cancellationtoken" aria-label="Link to CancellationToken.CancellationToken">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">CancellationToken()</code></pre></div><p>A token that is never cancelled.</p>
+<h4 id="cancellationtoken-requested">CancellationToken.requested<a class="permalink" href="#cancellationtoken-requested" aria-label="Link to CancellationToken.requested">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">requested() <b class="kw">is</b> <b class="kw">bool</b></code></pre></div><p>false.</p>
+<h4 id="cancellationtoken-check">CancellationToken.check<a class="permalink" href="#cancellationtoken-check" aria-label="Link to CancellationToken.check">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">check() <b class="kw">is</b> <b class="kw">void</b></code></pre></div><p>Does nothing.</p>
+<h4 id="cancellationtoken-wait">CancellationToken.wait<a class="permalink" href="#cancellationtoken-wait" aria-label="Link to CancellationToken.wait">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama"><b class="kw">async</b> wait() <b class="kw">is</b> Cancelling</code></pre></div><p>Waits forever.</p>
+<footer>Generated from <code>okkama man</code>. The source comments are the source of truth. · <a href="https://okkama-lang.github.io/">okkama-lang.github.io</a> · <a href="https://github.com/Okkama-lang/okkama">Source on GitHub</a></footer></main><aside class="on-this-page"><div class="nav-label">ON THIS PAGE</div><a href="#synopsis">Synopsis</a><a href="#description">Description</a><a href="#public-api">Public API</a><a href="#role-cancelling">role Cancelling</a><a href="#object-cancellation">object Cancellation</a><a href="#object-cancellationtoken">object CancellationToken</a></aside></div><script src="../../assets/data.js"></script><script src="../../assets/app.js"></script></body></html>

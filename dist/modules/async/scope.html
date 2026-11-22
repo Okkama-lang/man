@@ -1,0 +1,65 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Okkama standard library reference, generated from okkama man."><title>async/scope · Okkama reference</title><link rel="stylesheet" href="../../assets/style.css"></head><body data-root="../../" data-module="async/scope"><header><button id="menu" aria-label="Toggle module navigation" aria-expanded="false">☰</button><a class="brand" href="../../index.html"><strong>0&lt;</strong> Okkama <span>REFERENCE</span></a><div class="searchbox"><label class="sr-only" for="search">Search modules and actions</label><input id="search" type="search" placeholder="Find a module or action…" autocomplete="off"><kbd>/</kbd><div id="results" hidden aria-live="polite"></div></div><div class="toplinks"><a href="https://okkama-lang.github.io/">okkama.</a><a href="https://github.com/Okkama-lang/okkama" target="_blank" rel="noopener noreferrer">GitHub ↗</a></div><span class="version">okkama 0.6.2</span></header><div class="layout"><aside id="sidebar"><div class="nav-label">STANDARD LIBRARY</div><nav id="tree" aria-label="Modules"></nav></aside><main><div class="breadcrumb"><a href="../../index.html">Reference</a> / async/scope</div><h1 id="async-scope">async/scope<a class="permalink" href="#async-scope" aria-label="Link to async/scope">#</a></h1><p>Structured lifetime for language futures.</p>
+<p><strong>Version:</strong> <code>v1.0.0</code></p>
+<h2 id="synopsis">Synopsis<a class="permalink" href="#synopsis" aria-label="Link to Synopsis">#</a></h2><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama"><b class="kw">let</b> group <b class="kw">is</b> FutureGroup&lt;<b class="kw">int</b>&gt; = FutureGroup();
+<b class="kw">let</b> first = Worker(id: <span class="num">1</span>).run();
+<b class="kw">let</b> second = Worker(id: <span class="num">2</span>).run();
+
+group.start(first);
+group.start(second);
+<b class="kw">await</b> group.wait();</code></pre></div><h2 id="description">Description<a class="permalink" href="#description" aria-label="Link to Description">#</a></h2><p>Structured lifetime for language futures.</p>
+<p><code>FutureGroup&lt;T&gt;</code> owns the completion lifecycle of registered <code>Future&lt;T&gt;</code>
+values. <code>start()</code> registers and eagerly starts a future without taking it away
+from the caller. Registering the same future identity again is idempotent.</p>
+<p><code>wait()</code> seals the group, waits for every child and observes all failures.
+<code>cancel()</code> also seals it and requests cancellation of unfinished children;
+call <code>wait()</code> afterwards when using a group directly. Explicit cancellation
+accepts cancellation-only child outcomes, including children already settled
+by a prior await cancellation; real secondary cleanup failures remain reported.
+Without explicit group cancellation, a cancelled child remains a failure.
+Registration after
+sealing throws <code>FinishedFutureGroup</code>.</p>
+<p><code>active()</code> counts children whose success, failure or cancellation cleanup has
+not settled yet. It is an observation for supervision and diagnostics, not a
+polling substitute for <code>wait()</code>.</p>
+<p>Independent child failures are reported in registration order. The first is
+the primary failure and later failures remain ordered secondary diagnostics.
+Typed catches continue to see the unchanged primary error.</p>
+<p><code>FutureScope&lt;T,R&gt;</code> binds that group lifecycle to one async body. The body is
+invoked once, receives only the <code>Supervising&lt;T&gt;</code> capability and may register
+children without gaining a separate way to finish the group. The scope waits
+for every child before publishing the body result:</p>
+<div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-text">object Job {
+    Job();
+    async run() is int { 21; }
+}
+
+object Batch {
+    Batch();
+
+    async run(group is Supervising&lt;int&gt;) is int {
+        group.start(Job().run());
+        42;
+    }
+}
+
+let scope is FutureScope&lt;int, int&gt; = FutureScope(action: Batch().run);
+let answer = await scope.outcome();</code></pre></div><p>If the body fails, or the caller cancels <code>scope.outcome()</code>, unfinished children
+are cancelled and their cleanup is awaited. The body failure remains primary;
+independent child cleanup failures are retained as ordered secondary failures.</p>
+<p>One scope owns one homogeneous child result type. Nest another scope when one
+operation owns children of another type.</p>
+<h2 id="public-api">Public API<a class="permalink" href="#public-api" aria-label="Link to Public API">#</a></h2><h3 id="role-supervising">role Supervising<a class="permalink" href="#role-supervising" aria-label="Link to role Supervising">#</a></h3><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama"><b class="kw">role</b> Supervising&lt;T&gt;</code></pre></div><p>Somewhere futures are started and watched.</p>
+<h4 id="supervising-start">Supervising.start<a class="permalink" href="#supervising-start" aria-label="Link to Supervising.start">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">start(origin <b class="kw">is</b> Future&lt;T&gt;) <b class="kw">is</b> <b class="kw">void</b></code></pre></div><p>Starts origin under supervision.</p>
+<h4 id="supervising-active">Supervising.active<a class="permalink" href="#supervising-active" aria-label="Link to Supervising.active">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">active() <b class="kw">is</b> <b class="kw">int</b></code></pre></div><p>How many are still running.</p>
+<h4 id="supervising-cancel">Supervising.cancel<a class="permalink" href="#supervising-cancel" aria-label="Link to Supervising.cancel">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">cancel() <b class="kw">is</b> <b class="kw">void</b></code></pre></div><p>Asks all of them to stop.</p>
+<h3 id="object-futuregroup">object FutureGroup<a class="permalink" href="#object-futuregroup" aria-label="Link to object FutureGroup">#</a></h3><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama"><b class="kw">object</b> FutureGroup&lt;T&gt; <b class="kw">does</b> Supervising&lt;T&gt;</code></pre></div><p>Futures started together and waited for together; failures are not lost.</p>
+<h4 id="futuregroup-futuregroup">FutureGroup.FutureGroup<a class="permalink" href="#futuregroup-futuregroup" aria-label="Link to FutureGroup.FutureGroup">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">FutureGroup()</code></pre></div><p>An empty group.</p>
+<h4 id="futuregroup-start">FutureGroup.start<a class="permalink" href="#futuregroup-start" aria-label="Link to FutureGroup.start">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">start(origin <b class="kw">is</b> Future&lt;T&gt;) <b class="kw">is</b> <b class="kw">void</b></code></pre></div><p>Starts origin in the group; FinishedFutureGroup after wait().</p>
+<h4 id="futuregroup-active">FutureGroup.active<a class="permalink" href="#futuregroup-active" aria-label="Link to FutureGroup.active">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">active() <b class="kw">is</b> <b class="kw">int</b></code></pre></div><p>How many are still running.</p>
+<h4 id="futuregroup-cancel">FutureGroup.cancel<a class="permalink" href="#futuregroup-cancel" aria-label="Link to FutureGroup.cancel">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">cancel() <b class="kw">is</b> <b class="kw">void</b></code></pre></div><p>Closes the group and asks every child to stop; wait() afterwards.</p>
+<h4 id="futuregroup-wait">FutureGroup.wait<a class="permalink" href="#futuregroup-wait" aria-label="Link to FutureGroup.wait">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama"><b class="kw">async</b> wait() <b class="kw">is</b> FutureGroup&lt;T&gt;</code></pre></div><p>Closes the group and waits for every child; the first failure is thrown.</p>
+<h3 id="object-futurescope">object FutureScope<a class="permalink" href="#object-futurescope" aria-label="Link to object FutureScope">#</a></h3><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama"><b class="kw">object</b> FutureScope&lt;T, R&gt;</code></pre></div><p>A block run with a group that is waited for before it ends.</p>
+<h4 id="futurescope-futurescope">FutureScope.FutureScope<a class="permalink" href="#futurescope-futurescope" aria-label="Link to FutureScope.FutureScope">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">FutureScope(:<b class="kw">action</b>)</code></pre></div><p>Runs action with a group of its own.</p>
+<h4 id="futurescope-outcome">FutureScope.outcome<a class="permalink" href="#futurescope-outcome" aria-label="Link to FutureScope.outcome">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama"><b class="kw">async</b> outcome() <b class="kw">is</b> R</code></pre></div><p>action&#39;s result, after every future it started has ended.</p>
+<h2 id="errors">Errors<a class="permalink" href="#errors" aria-label="Link to Errors">#</a></h2><h3 id="enum-finishedfuturegroup">enum FinishedFutureGroup<a class="permalink" href="#enum-finishedfuturegroup" aria-label="Link to enum FinishedFutureGroup">#</a></h3><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama"><b class="kw">enum</b> FinishedFutureGroup <b class="kw">is</b> Error = (finished)</code></pre></div><p>The group was already waited for or cancelled.</p>
+<h4 id="finishedfuturegroup-finished">FinishedFutureGroup.finished<a class="permalink" href="#finishedfuturegroup-finished" aria-label="Link to FinishedFutureGroup.finished">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">finished</code></pre></div><footer>Generated from <code>okkama man</code>. The source comments are the source of truth. · <a href="https://okkama-lang.github.io/">okkama-lang.github.io</a> · <a href="https://github.com/Okkama-lang/okkama">Source on GitHub</a></footer></main><aside class="on-this-page"><div class="nav-label">ON THIS PAGE</div><a href="#synopsis">Synopsis</a><a href="#description">Description</a><a href="#public-api">Public API</a><a href="#role-supervising">role Supervising</a><a href="#object-futuregroup">object FutureGroup</a><a href="#object-futurescope">object FutureScope</a><a href="#errors">Errors</a><a href="#enum-finishedfuturegroup">enum FinishedFutureGroup</a></aside></div><script src="../../assets/data.js"></script><script src="../../assets/app.js"></script></body></html>

@@ -1,24 +1,24 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Okkama standard library reference, generated from okkama man."><title>json · Okkama reference</title><link rel="stylesheet" href="../assets/style.css"></head><body data-root="../" data-module="json"><header><button id="menu" aria-label="Toggle module navigation" aria-expanded="false">☰</button><a class="brand" href="../index.html"><strong>0&lt;</strong> Okkama <span>REFERENCE</span></a><div class="searchbox"><label class="sr-only" for="search">Search modules and actions</label><input id="search" type="search" placeholder="Find a module or action…" autocomplete="off"><kbd>/</kbd><div id="results" hidden aria-live="polite"></div></div><div class="toplinks"><a href="https://okkama-lang.github.io/">okkama.</a><a href="https://github.com/Okkama-lang/okkama" target="_blank" rel="noopener noreferrer">GitHub ↗</a></div><span class="version">okkama 0.6.3</span></header><div class="layout"><aside id="sidebar"><div class="nav-label">STANDARD LIBRARY</div><nav id="tree" aria-label="Modules"></nav></aside><main><div class="breadcrumb"><a href="../index.html">Reference</a> / json</div><h1 id="json">json<a class="permalink" href="#json" aria-label="Link to json">#</a></h1><p>JSON values: one immutable Json, parsed or built in code, read without casts and written by the runtime in one call.</p>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Okkama standard library reference, generated from okkama man."><title>json · Okkama reference</title><link rel="stylesheet" href="../assets/style.css"></head><body data-root="../" data-module="json"><header><button id="menu" aria-label="Toggle module navigation" aria-expanded="false">☰</button><a class="brand" href="../index.html"><strong>0&lt;</strong> Okkama <span>REFERENCE</span></a><div class="searchbox"><label class="sr-only" for="search">Search modules and actions</label><input id="search" type="search" placeholder="Find a module or action…" autocomplete="off"><kbd>/</kbd><div id="results" hidden aria-live="polite"></div></div><div class="toplinks"><a href="https://okkama-lang.github.io/">okkama.</a><a href="https://github.com/Okkama-lang/okkama" target="_blank" rel="noopener noreferrer">GitHub ↗</a></div><span class="version">okkama 0.6.4</span></header><div class="layout"><aside id="sidebar"><div class="nav-label">STANDARD LIBRARY</div><nav id="tree" aria-label="Modules"></nav></aside><main><div class="breadcrumb"><a href="../index.html">Reference</a> / json</div><h1 id="json">json<a class="permalink" href="#json" aria-label="Link to json">#</a></h1><p>JSON values: one immutable Json, parsed or built in code, read without casts and written by the runtime in one call.</p>
 <p><strong>Version:</strong> <code>v1.0.0</code></p>
-<h2 id="synopsis">Synopsis<a class="permalink" href="#synopsis" aria-label="Link to Synopsis">#</a></h2><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">import <span class="str">&quot;io/stdout&quot;</span> take Stdout;
-<b class="kw">let</b> order = ParsedJson(<span class="str">&quot;{\&quot;id\&quot;:4711}&quot;</span>).root();
-Stdout().writeln(order.<b class="kw">int</b>(<span class="str">&quot;id&quot;</span>).<b class="kw">string</b>());</code></pre></div><h2 id="description">Description<a class="permalink" href="#description" aria-label="Link to Description">#</a></h2><p>JSON values: one immutable Json, parsed or built in code, read without
-casts and written by the runtime in one call.</p>
-<div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-output">4711</code></pre></div><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-text">let order = ParsedJson(text).root();
-order.int(&quot;id&quot;);                                // 4711
-order.get(&quot;customer&quot;).text(&quot;name&quot;);             // &quot;Ada&quot;
-order.maybe(&quot;note&quot;).text() else &quot;&quot;;                // &quot;&quot; when absent or null
-let lines = order.list(&quot;items&quot;).map() -&gt; line {
-    Line(sku: line.text(&quot;sku&quot;), qty: line.int(&quot;qty&quot;));
+<h2 id="synopsis">Synopsis<a class="permalink" href="#synopsis" aria-label="Link to Synopsis">#</a></h2><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama"><b class="kw">let</b> order = ParsedJson(text).root();
+order.<b class="kw">int</b>(<span class="str">&quot;id&quot;</span>);                                <span class="comment">// 4711</span>
+order.get(<span class="str">&quot;customer&quot;</span>).text(<span class="str">&quot;name&quot;</span>);             <span class="comment">// &quot;Ada&quot;</span>
+order.maybe(<span class="str">&quot;note&quot;</span>).text() <b class="kw">else</b> <span class="str">&quot;&quot;</span>;                <span class="comment">// &quot;&quot; when absent or null</span>
+<b class="kw">let</b> lines = order.list(<span class="str">&quot;items&quot;</span>).map() -&gt; line {
+    Line(sku: line.text(<span class="str">&quot;sku&quot;</span>), qty: line.<b class="kw">int</b>(<span class="str">&quot;qty&quot;</span>));
 };
 
-let reply = Json(
-    JsonField(&quot;id&quot;, 4711),
-    JsonField(&quot;customer&quot;, Json(JsonField(&quot;name&quot;, &quot;Ada&quot;))),
-    JsonField(&quot;tags&quot;, Json(items: [Json(&quot;new&quot;), Json(&quot;vip&quot;)])),
+<b class="kw">let</b> reply = Json(
+    JsonField(<span class="str">&quot;id&quot;</span>, <span class="num">4711</span>),
+    JsonField(<span class="str">&quot;customer&quot;</span>, Json(JsonField(<span class="str">&quot;name&quot;</span>, <span class="str">&quot;Ada&quot;</span>))),
+    JsonField(<span class="str">&quot;tags&quot;</span>, Json(items: [Json(<span class="str">&quot;new&quot;</span>), Json(<span class="str">&quot;vip&quot;</span>)])),
 );
-reply.string();                                 // compact text
-reply.pretty(2);                                // indented text</code></pre></div><p>Everything that goes wrong is a JsonError. Reads check kinds: a value of
+reply.<b class="kw">string</b>();                                 <span class="comment">// compact text</span>
+reply.pretty(<span class="num">2</span>);                                <span class="comment">// indented text</span></code></pre></div><h2 id="description">Description<a class="permalink" href="#description" aria-label="Link to Description">#</a></h2><p>JSON values: one immutable Json, parsed or built in code, read without
+casts and written by the runtime in one call.</p>
+<div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama,run">import &quot;io/stdout&quot; take Stdout;
+let order = ParsedJson(&quot;{\&quot;id\&quot;:4711}&quot;).root();
+Stdout().writeln(order.int(&quot;id&quot;).string());</code></pre></div><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-output">4711</code></pre></div><p>Everything that goes wrong is a JsonError. Reads check kinds: a value of
 another kind is JsonError.wrong_kind, a missing member or index
 JsonError.missing, a number that is not the integer asked for
 JsonError.invalid_number; each names the RFC 6901 pointer of the value

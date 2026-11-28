@@ -1,0 +1,107 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Okkama standard library reference, generated from okkama man."><title>os/port · Okkama reference</title><link rel="stylesheet" href="../../assets/style.css"></head><body data-root="../../" data-module="os/port"><header><button id="menu" aria-label="Toggle module navigation" aria-expanded="false">☰</button><a class="brand" href="../../index.html"><strong>0&lt;</strong> Okkama <span>REFERENCE</span></a><div class="searchbox"><label class="sr-only" for="search">Search modules and actions</label><input id="search" type="search" placeholder="Find a module or action…" autocomplete="off"><kbd>/</kbd><div id="results" hidden aria-live="polite"></div></div><div class="toplinks"><a href="https://okkama-lang.github.io/">okkama.</a><a href="https://github.com/Okkama-lang/okkama" target="_blank" rel="noopener noreferrer">GitHub ↗</a></div><span class="version">okkama 0.6.8</span></header><div class="layout"><aside id="sidebar"><div class="nav-label">STANDARD LIBRARY</div><nav id="tree" aria-label="Modules"></nav></aside><main><div class="breadcrumb"><a href="../../index.html">Reference</a> / os/port</div><h1 id="os-port">os/port<a class="permalink" href="#os-port" aria-label="Link to os/port">#</a></h1><p>Code in any language, called from Okkama through a helper process (#1081): the Erlang &quot;ports&quot; model.</p>
+<p><strong>Version:</strong> <code>v1.0.0</code></p>
+<h2 id="synopsis">Synopsis<a class="permalink" href="#synopsis" aria-label="Link to Synopsis">#</a></h2><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">import <span class="str">&quot;os/command&quot;</span> take InheritedCommand;
+import <span class="str">&quot;fs/path&quot;</span> take Path;
+import <span class="str">&quot;json&quot;</span> take Json, JsonField;
+
+<b class="kw">async</b> main() <b class="kw">is</b> <b class="kw">int</b> {
+    <b class="kw">let</b> images = Port(command: InheritedCommand(program: Path(<span class="str">&quot;bin/image-helper&quot;</span>)));
+    <b class="kw">let</b> thumb = <b class="kw">await</b> images.call(method: <span class="str">&quot;resize&quot;</span>, payload: Json(JsonField(<span class="str">&quot;width&quot;</span>, <span class="num">200</span>)), bytes: [<b class="kw">byte</b>(<span class="num">137</span>)]);
+    <b class="kw">let</b> size = thumb.json().<b class="kw">int</b>(<span class="str">&quot;bytes&quot;</span>);
+    images.close();
+    <span class="num">0</span>;
+}</code></pre></div><h2 id="description">Description<a class="permalink" href="#description" aria-label="Link to Description">#</a></h2><p>Code in any language, called from Okkama through a helper process (#1081):
+the Erlang &quot;ports&quot; model. A helper is a program that reads framed requests
+on its standard input and writes framed replies on its standard output
+(docs/port-protocol.md); okkama-port is the Rust crate that writes the
+helper side in a few lines.</p>
+<ul>
+<li>A helper starts with the first call, not when the port is made. One that
+ends, crashes, breaks the protocol or does not answer in time is stopped,
+the calls waiting on it fail with a PortFailure, and the next call starts
+a fresh one. A helper&#39;s failure never takes the program down.</li>
+<li>Calls carry ids, so many may be in flight at once on one helper, and
+replies may come in any order.</li>
+<li>Each call has a timeout (30 seconds unless told otherwise); it covers
+starting the helper when one is needed. A call that times out stops its
+helper, as a hung helper would hold up every call after it.</li>
+<li>instances: N keeps up to N helpers, and a call goes to the one with the
+fewest calls in flight.</li>
+<li>Payloads are JSON (Json) or CBOR (Cbor), chosen per call; the reply comes
+in the codec of its request. Raw bytes travel beside the payload in
+frames of their own, without base64.</li>
+</ul>
+<p>The helper&#39;s standard error is free for its logs: the port keeps its last
+2 KiB for the failure of a crashed helper. A helper is found by its
+command&#39;s program path: a path with a directory runs that file, a bare name
+is looked up in PATH. Blade does not carry helper binaries yet; a program
+names the path of one it built or installed.</p>
+<h2 id="public-api">Public API<a class="permalink" href="#public-api" aria-label="Link to Public API">#</a></h2><h3 id="enum-portcodec">enum PortCodec<a class="permalink" href="#enum-portcodec" aria-label="Link to enum PortCodec">#</a></h3><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama"><b class="kw">enum</b> PortCodec = (json, cbor)</code></pre></div><p>The codec of a call&#39;s payload, and of its reply.</p>
+<ul>
+<li><code>json</code>: JSON text, which every helper accepts.</li>
+<li><code>cbor</code>: CBOR, for helpers that name it in their hello.</li>
+</ul>
+<h4 id="portcodec-json">PortCodec.json<a class="permalink" href="#portcodec-json" aria-label="Link to PortCodec.json">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">json</code></pre></div><p>JSON text, which every helper accepts.</p>
+<h4 id="portcodec-cbor">PortCodec.cbor<a class="permalink" href="#portcodec-cbor" aria-label="Link to PortCodec.cbor">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">cbor</code></pre></div><p>CBOR, for helpers that name it in their hello.</p>
+<h3 id="object-port">object Port<a class="permalink" href="#object-port" aria-label="Link to object Port">#</a></h3><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama"><b class="kw">object</b> Port</code></pre></div><p>Helper processes that answer calls: started with the first call, restarted
+after a crash or a hang.</p>
+<div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">import <span class="str">&quot;os/command&quot;</span> take InheritedCommand;
+import <span class="str">&quot;fs/path&quot;</span> take Path;
+import <span class="str">&quot;json&quot;</span> take Json, JsonField;
+
+<b class="kw">async</b> main() <b class="kw">is</b> <b class="kw">int</b> {
+    <b class="kw">let</b> text = Port(command: InheritedCommand(program: Path(<span class="str">&quot;bin/text-helper&quot;</span>)), instances: <span class="num">2</span>);
+    <b class="kw">let</b> words = <b class="kw">await</b> text.call(<span class="str">&quot;words&quot;</span>, Json(JsonField(<span class="str">&quot;text&quot;</span>, <span class="str">&quot;to be or not&quot;</span>)));
+    <b class="kw">let</b> count = words.json().<b class="kw">int</b>(<span class="str">&quot;count&quot;</span>);
+    text.close();
+    <span class="num">0</span>;
+}</code></pre></div><h4 id="port-port">Port.Port<a class="permalink" href="#port-port" aria-label="Link to Port.Port">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">Port(command <b class="kw">is</b> Commanding, instances <b class="kw">is</b> <b class="kw">int</b> = <span class="num">1</span>, frame_limit <b class="kw">is</b> <b class="kw">int</b> = <span class="num">16777216</span>)</code></pre></div><p>Up to instances helpers run by command; a frame from a helper may be
+frame_limit bytes (16 MiB unless told otherwise).</p>
+<h4 id="port-call">Port.call<a class="permalink" href="#port-call" aria-label="Link to Port.call">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama"><b class="kw">async</b> call(method <b class="kw">is</b> <b class="kw">string</b>, payload <b class="kw">is</b> Json = Json(), bytes <b class="kw">is</b> @<b class="kw">byte</b> = [], timeout <b class="kw">is</b> Duration = Duration(seconds: <span class="num">30</span>.rat())) <b class="kw">is</b> PortReply</code></pre></div><p>The helper&#39;s answer to method with a JSON payload and raw bytes;
+PortFailure when the helper refuses, crashes, hangs past timeout or
+breaks the protocol.</p>
+<h4 id="port-call-2">Port.call<a class="permalink" href="#port-call-2" aria-label="Link to Port.call">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama"><b class="kw">async</b> call(method <b class="kw">is</b> <b class="kw">string</b>, payload <b class="kw">is</b> Cbor, bytes <b class="kw">is</b> @<b class="kw">byte</b> = [], timeout <b class="kw">is</b> Duration = Duration(seconds: <span class="num">30</span>.rat())) <b class="kw">is</b> PortReply</code></pre></div><p>The helper&#39;s answer to method with a CBOR payload and raw bytes; the
+helper must accept CBOR, or the call is PortFailure.unsupported.</p>
+<h4 id="port-close">Port.close<a class="permalink" href="#port-close" aria-label="Link to Port.close">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">close() <b class="kw">is</b> <b class="kw">void</b></code></pre></div><p>Stops every helper; calls in flight fail with PortFailure.closed, and so
+does every later call. Closing again does nothing.</p>
+<h3 id="object-portreply">object PortReply<a class="permalink" href="#object-portreply" aria-label="Link to object PortReply">#</a></h3><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama"><b class="kw">object</b> PortReply</code></pre></div><p>What a helper answered: its payload in the codec of the request, and the
+raw bytes it attached.</p>
+<div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">import <span class="str">&quot;os/command&quot;</span> take InheritedCommand;
+import <span class="str">&quot;fs/path&quot;</span> take Path;
+
+<b class="kw">async</b> main() <b class="kw">is</b> <b class="kw">int</b> {
+    <b class="kw">let</b> hashes = Port(command: InheritedCommand(program: Path(<span class="str">&quot;bin/hash-helper&quot;</span>)));
+    <b class="kw">let</b> reply = <b class="kw">await</b> hashes.call(method: <span class="str">&quot;digest&quot;</span>, bytes: [<b class="kw">byte</b>(<span class="num">1</span>), <b class="kw">byte</b>(<span class="num">2</span>)]);
+    <b class="kw">let</b> hex = reply.json().text(<span class="str">&quot;hex&quot;</span>);
+    <b class="kw">let</b> raw = reply.bytes();
+    hashes.close();
+    <span class="num">0</span>;
+}</code></pre></div><h4 id="portreply-portreply">PortReply.PortReply<a class="permalink" href="#portreply-portreply" aria-label="Link to PortReply.PortReply">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">PortReply(codec <b class="kw">is</b> PortCodec, json <b class="kw">is</b> Json, cbor <b class="kw">is</b> Cbor, attachments <b class="kw">is</b> @@<b class="kw">byte</b>)</code></pre></div><p>Made by Port.call(); not constructed directly.</p>
+<h4 id="portreply-json">PortReply.json<a class="permalink" href="#portreply-json" aria-label="Link to PortReply.json">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">json() <b class="kw">is</b> Json</code></pre></div><p>The payload of a reply to a JSON call (null when the helper sent none);
+PortFailure.wrong_codec for a CBOR call.</p>
+<h4 id="portreply-cbor">PortReply.cbor<a class="permalink" href="#portreply-cbor" aria-label="Link to PortReply.cbor">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">cbor() <b class="kw">is</b> Cbor</code></pre></div><p>The payload of a reply to a CBOR call (null when the helper sent none);
+PortFailure.wrong_codec for a JSON call.</p>
+<h4 id="portreply-bytes">PortReply.bytes<a class="permalink" href="#portreply-bytes" aria-label="Link to PortReply.bytes">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">bytes() <b class="kw">is</b> @<b class="kw">byte</b></code></pre></div><p>The raw bytes the helper attached, joined in order; [] when none.</p>
+<h2 id="errors">Errors<a class="permalink" href="#errors" aria-label="Link to Errors">#</a></h2><h3 id="enum-portfailure">enum PortFailure<a class="permalink" href="#enum-portfailure" aria-label="Link to enum PortFailure">#</a></h3><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama"><b class="kw">enum</b> PortFailure <b class="kw">is</b> Error = (unavailable(command <b class="kw">is</b> <b class="kw">string</b>, reason <b class="kw">is</b> <b class="kw">string</b>), incompatible(protocol <b class="kw">is</b> <b class="kw">int</b>), unsupported(codec <b class="kw">is</b> PortCodec), timed_out(method <b class="kw">is</b> <b class="kw">string</b>), crashed(method <b class="kw">is</b> <b class="kw">string</b>, detail <b class="kw">is</b> <b class="kw">string</b>), malformed(method <b class="kw">is</b> <b class="kw">string</b>, reason <b class="kw">is</b> <b class="kw">string</b>), refused(method <b class="kw">is</b> <b class="kw">string</b>, code <b class="kw">is</b> <b class="kw">string</b>, message <b class="kw">is</b> <b class="kw">string</b>), wrong_codec(asked <b class="kw">is</b> PortCodec, answered <b class="kw">is</b> PortCodec), closed)</code></pre></div><p>Why a call to a helper failed.</p>
+<ul>
+<li><code>unavailable</code>: The helper could not be started (the command and why).</li>
+<li><code>incompatible</code>: The helper speaks another protocol version than 1.</li>
+<li><code>unsupported</code>: The helper does not accept this codec.</li>
+<li><code>timed_out</code>: No answer in time; the helper was stopped.</li>
+<li><code>crashed</code>: The helper ended or was stopped before it answered; detail
+says how it ended and what it last wrote on its standard error.</li>
+<li><code>malformed</code>: The helper broke the protocol; it was stopped.</li>
+<li><code>refused</code>: The helper answered with a failure: its code and message.</li>
+<li><code>wrong_codec</code>: The reply was asked for in one codec and came in another.</li>
+<li><code>closed</code>: The port is closed.</li>
+</ul>
+<h4 id="portfailure-unavailable">PortFailure.unavailable<a class="permalink" href="#portfailure-unavailable" aria-label="Link to PortFailure.unavailable">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">unavailable(command <b class="kw">is</b> <b class="kw">string</b>, reason <b class="kw">is</b> <b class="kw">string</b>)</code></pre></div><p>The helper could not be started (the command and why).</p>
+<h4 id="portfailure-incompatible">PortFailure.incompatible<a class="permalink" href="#portfailure-incompatible" aria-label="Link to PortFailure.incompatible">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">incompatible(protocol <b class="kw">is</b> <b class="kw">int</b>)</code></pre></div><p>The helper speaks another protocol version than 1.</p>
+<h4 id="portfailure-unsupported">PortFailure.unsupported<a class="permalink" href="#portfailure-unsupported" aria-label="Link to PortFailure.unsupported">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">unsupported(codec <b class="kw">is</b> PortCodec)</code></pre></div><p>The helper does not accept this codec.</p>
+<h4 id="portfailure-timed-out">PortFailure.timed_out<a class="permalink" href="#portfailure-timed-out" aria-label="Link to PortFailure.timed_out">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">timed_out(method <b class="kw">is</b> <b class="kw">string</b>)</code></pre></div><p>No answer in time; the helper was stopped.</p>
+<h4 id="portfailure-crashed">PortFailure.crashed<a class="permalink" href="#portfailure-crashed" aria-label="Link to PortFailure.crashed">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">crashed(method <b class="kw">is</b> <b class="kw">string</b>, detail <b class="kw">is</b> <b class="kw">string</b>)</code></pre></div><p>The helper ended or was stopped before it answered; detail</p>
+<h4 id="portfailure-malformed">PortFailure.malformed<a class="permalink" href="#portfailure-malformed" aria-label="Link to PortFailure.malformed">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">malformed(method <b class="kw">is</b> <b class="kw">string</b>, reason <b class="kw">is</b> <b class="kw">string</b>)</code></pre></div><p>The helper broke the protocol; it was stopped.</p>
+<h4 id="portfailure-refused">PortFailure.refused<a class="permalink" href="#portfailure-refused" aria-label="Link to PortFailure.refused">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">refused(method <b class="kw">is</b> <b class="kw">string</b>, code <b class="kw">is</b> <b class="kw">string</b>, message <b class="kw">is</b> <b class="kw">string</b>)</code></pre></div><p>The helper answered with a failure: its code and message.</p>
+<h4 id="portfailure-wrong-codec">PortFailure.wrong_codec<a class="permalink" href="#portfailure-wrong-codec" aria-label="Link to PortFailure.wrong_codec">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">wrong_codec(asked <b class="kw">is</b> PortCodec, answered <b class="kw">is</b> PortCodec)</code></pre></div><p>The reply was asked for in one codec and came in another.</p>
+<h4 id="portfailure-closed">PortFailure.closed<a class="permalink" href="#portfailure-closed" aria-label="Link to PortFailure.closed">#</a></h4><div class="code-wrap"><button class="copy" type="button">Copy</button><pre><code class="language-okkama">closed</code></pre></div><p>The port is closed.</p>
+<footer>Generated from <code>okkama man</code>. The source comments are the source of truth. · <a href="https://okkama-lang.github.io/">okkama-lang.github.io</a> · <a href="https://github.com/Okkama-lang/okkama">Source on GitHub</a></footer></main><aside class="on-this-page"><div class="nav-label">ON THIS PAGE</div><a href="#synopsis">Synopsis</a><a href="#description">Description</a><a href="#public-api">Public API</a><a href="#enum-portcodec">enum PortCodec</a><a href="#object-port">object Port</a><a href="#object-portreply">object PortReply</a><a href="#errors">Errors</a><a href="#enum-portfailure">enum PortFailure</a></aside></div><script src="../../assets/data.js"></script><script src="../../assets/app.js"></script></body></html>
